@@ -4,9 +4,9 @@
 # Lines starting with # are comments.
 
 # Example topics (replace with your own):
-# machine learning
-# large language models
-# neural networks
-# artificial intelligence
-# computer vision
-# natural language processing
+machine learning
+large language models
+neural networks
+artificial intelligence
+computer vision
+natural language processing

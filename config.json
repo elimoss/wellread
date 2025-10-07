@@ -1,4 +1,5 @@
 {
-  "timeframe_hours": 24,
-  "cache_file": "cache/last_run.json"
+  "timeframe_hours": 16,
+  "cache_file": "cache/last_run.json",
+  "max_items": 5
 }

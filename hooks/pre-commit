@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# Pre-commit hook to prevent committing lines containing NOCOMMIT
+
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+# Check all staged files for NOCOMMIT
+FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+if [ -z "$FILES" ]; then
+    exit 0
+fi
+
+FOUND=0
+
+for FILE in $FILES; do
+    # Skip binary files
+    if file "$FILE" | grep -q "text"; then
+        # Search for NOCOMMIT in the file
+        MATCHES=$(git diff --cached "$FILE" | grep "^\+" | grep -v "^+++" | grep "NOCOMMIT")
+
+        if [ -n "$MATCHES" ]; then
+            if [ $FOUND -eq 0 ]; then
+                echo -e "${RED}❌ COMMIT REJECTED${NC}"
+                echo -e "${RED}Found NOCOMMIT in staged changes:${NC}"
+                echo ""
+                FOUND=1
+            fi
+
+            echo -e "${RED}File: $FILE${NC}"
+            echo "$MATCHES"
+            echo ""
+        fi
+    fi
+done
+
+if [ $FOUND -eq 1 ]; then
+    echo -e "${RED}Please remove NOCOMMIT markers before committing.${NC}"
+    exit 1
+fi
+
+exit 0
