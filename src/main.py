@@ -35,32 +35,21 @@ async def main():
         sys.exit(1)
 
     # Load configuration
-    try:
-        with open('config.json', 'r') as f:
-            config = json.load(f)
-    except Exception:
-        print('⚠️  Using default configuration')
-        config = {
-            'timeframe_hours': 24,
-            'max_items_to_post': 20,
-            'embedding_cache_dir': 'cache/embeddings',
-            'llm_models': {
-                'summarization': 'claude-sonnet-4-5-20250929'
-            }
-        }
+    with open('config.json', 'r') as f:
+        config = json.load(f)
 
-    TIMEFRAME_HOURS = int(os.environ.get('TIMEFRAME_HOURS', config.get('timeframe_hours', 24)))
-    MAX_ITEMS_TO_POST = int(os.environ.get('MAX_ITEMS_TO_POST', config.get('max_items_to_post', 20)))
-    MIN_RELEVANCE_SCORE = float(os.environ.get('MIN_RELEVANCE_SCORE', config.get('min_relevance_score', 0.1)))
-    EMBEDDING_CACHE_DIR = os.environ.get('EMBEDDING_CACHE_DIR', config.get('embedding_cache_dir', 'cache/embeddings'))
+    TIMEFRAME_HOURS = config['timeframe_hours']
+    MAX_ITEMS_TO_POST = config['max_items_to_post']
+    MIN_RELEVANCE_SCORE = config['min_relevance_score']
+    EMBEDDING_CACHE_DIR = config['embedding_cache_dir']
 
     # Article cache configuration
-    CACHE_POSTED_ARTICLES = os.environ.get('CACHE_POSTED_ARTICLES', str(config.get('cache_posted_articles', True))).lower() == 'true'
-    POSTED_ARTICLES_CACHE_FILE = os.environ.get('POSTED_ARTICLES_CACHE_FILE', config.get('posted_articles_cache_file', 'cache/posted_articles.json'))
+    CACHE_POSTED_ARTICLES = config['cache_posted_articles']
+    POSTED_ARTICLES_CACHE_FILE = config['posted_articles_cache_file']
 
     # Get LLM model configurations
     llm_models = config.get('llm_models', {})
-    SUMMARIZATION_MODEL = os.environ.get('SUMMARIZATION_MODEL', llm_models.get('summarization', 'claude-sonnet-4-5-20250929'))
+    SUMMARIZATION_MODEL = llm_models['summarization']
 
     print(f'⏰ Looking for posts from the last {TIMEFRAME_HOURS} hours')
     print(f'📊 Maximum items to post: {MAX_ITEMS_TO_POST}')
