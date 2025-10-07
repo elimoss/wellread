@@ -1,0 +1,4 @@
+{
+  "timeframe_hours": 24,
+  "cache_file": "cache/last_run.json"
+}

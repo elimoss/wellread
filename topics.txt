@@ -1,0 +1,12 @@
+# Topics and Interests for Curation
+# Add topics, queries, or keywords that interest you - one per line
+# The bot will prioritize posts related to these topics
+# Lines starting with # are comments.
+
+# Example topics (replace with your own):
+# machine learning
+# large language models
+# neural networks
+# artificial intelligence
+# computer vision
+# natural language processing

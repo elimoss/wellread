@@ -1,0 +1,19 @@
+{
+  "name": "wellread",
+  "version": "1.0.0",
+  "description": "RSS feed monitoring Slackbot with AI-powered summarization",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["rss", "slack", "bot", "ai", "summarization"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.0",
+    "@slack/web-api": "^7.0.0",
+    "rss-parser": "^3.13.0"
+  }
+}
