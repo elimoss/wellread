@@ -2,6 +2,4 @@
 # Add one feed URL per line. Lines starting with # are comments.
 
 # Example feeds (replace with your own):
-https://arxiv.org/rss/cs.AI
-https://arxiv.org/rss/cs.LG
-# https://blog.example.com/feed
+http://feeds.nature.com/nbt/rss/current
