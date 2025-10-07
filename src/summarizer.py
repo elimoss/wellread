@@ -4,8 +4,10 @@ from anthropic import Anthropic
 
 
 class ClaudeSummarizer:
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, summarization_model: str = "claude-sonnet-4-5-20250929", digest_model: str = "claude-sonnet-4-5-20250929"):
         self.client = Anthropic(api_key=api_key)
+        self.summarization_model = summarization_model
+        self.digest_model = digest_model
 
     async def summarize_paper(self, item: Dict[str, Any], topics: List[str]) -> str:
         """Generate a summary for a single paper/item."""
@@ -28,25 +30,21 @@ Please provide a concise, insightful summary (2-4 sentences) that:
 
 Keep the tone professional but engaging."""
 
-        try:
-            # Run in thread pool to avoid blocking
-            loop = asyncio.get_event_loop()
-            message = await loop.run_in_executor(
-                None,
-                lambda: self.client.messages.create(
-                    model='claude-sonnet-4-5-20250929',
-                    max_tokens=300,
-                    messages=[{
-                        'role': 'user',
-                        'content': prompt
-                    }]
-                )
+        # Run in thread pool to avoid blocking
+        loop = asyncio.get_event_loop()
+        message = await loop.run_in_executor(
+            None,
+            lambda: self.client.messages.create(
+                model=self.summarization_model,
+                max_tokens=300,
+                messages=[{
+                    'role': 'user',
+                    'content': prompt
+                }]
             )
+        )
 
-            return message.content[0].text
-        except Exception as error:
-            print(f"Error summarizing item \"{item.get('title', 'Unknown')}\": {str(error)}")
-            return f"Summary unavailable: {str(error)}"
+        return message.content[0].text
 
     async def summarize_batch(self, items: List[Dict[str, Any]], topics: List[str], max_concurrent: int = 3) -> List[Dict[str, Any]]:
         """Summarize multiple items in batches."""
@@ -87,22 +85,18 @@ Topics of focus: {', '.join(topics)}
 
 Provide an engaging overview that highlights key themes and noteworthy developments."""
 
-        try:
-            # Run in thread pool to avoid blocking
-            loop = asyncio.get_event_loop()
-            message = await loop.run_in_executor(
-                None,
-                lambda: self.client.messages.create(
-                    model='claude-3-5-sonnet-20241022',
-                    max_tokens=250,
-                    messages=[{
-                        'role': 'user',
-                        'content': prompt
-                    }]
-                )
+        # Run in thread pool to avoid blocking
+        loop = asyncio.get_event_loop()
+        message = await loop.run_in_executor(
+            None,
+            lambda: self.client.messages.create(
+                model=self.digest_model,
+                max_tokens=250,
+                messages=[{
+                    'role': 'user',
+                    'content': prompt
+                }]
             )
+        )
 
-            return message.content[0].text
-        except Exception as error:
-            print(f"Error generating digest: {str(error)}")
-            return f"Found {len(items)} relevant items from your RSS feeds."
+        return message.content[0].text

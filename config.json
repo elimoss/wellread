@@ -1,5 +1,10 @@
 {
-  "timeframe_hours": 16,
+  "timeframe_hours": 24,
   "cache_file": "cache/last_run.json",
-  "max_items": 5
+  "max_items": 20,
+  "embedding_cache_dir": "cache/embeddings",
+  "llm_models": {
+    "summarization": "claude-sonnet-4-5-20250929",
+    "digest": "claude-sonnet-4-5-20250929"
+  }
 }

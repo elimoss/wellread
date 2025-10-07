@@ -39,17 +39,32 @@ async def main():
             config = json.load(f)
     except Exception:
         print('⚠️  Using default configuration')
-        config = {'timeframe_hours': 24, 'max_items': 20}
+        config = {
+            'timeframe_hours': 24,
+            'max_items': 20,
+            'embedding_cache_dir': 'cache/embeddings',
+            'llm_models': {
+                'summarization': 'claude-sonnet-4-5-20250929',
+                'digest': 'claude-sonnet-4-5-20250929'
+            }
+        }
 
     TIMEFRAME_HOURS = int(os.environ.get('TIMEFRAME_HOURS', config.get('timeframe_hours', 24)))
     MAX_ITEMS = int(os.environ.get('MAX_ITEMS', config.get('max_items', 20)))
+    EMBEDDING_CACHE_DIR = os.environ.get('EMBEDDING_CACHE_DIR', config.get('embedding_cache_dir', 'cache/embeddings'))
+
+    # Get LLM model configurations
+    llm_models = config.get('llm_models', {})
+    SUMMARIZATION_MODEL = os.environ.get('SUMMARIZATION_MODEL', llm_models.get('summarization', 'claude-sonnet-4-5-20250929'))
+    DIGEST_MODEL = os.environ.get('DIGEST_MODEL', llm_models.get('digest', 'claude-sonnet-4-5-20250929'))
 
     print(f'⏰ Looking for posts from the last {TIMEFRAME_HOURS} hours')
     print(f'📊 Maximum items to surface: {MAX_ITEMS}')
+    print(f'🤖 Using models: {SUMMARIZATION_MODEL} (summaries), {DIGEST_MODEL} (digest)')
 
     # Initialize components
     feed_parser = RSSFeedParser()
-    curator = ContentCurator(OPENAI_API_KEY)
+    curator = ContentCurator(OPENAI_API_KEY, cache_dir=EMBEDDING_CACHE_DIR)
 
     try:
         # Step 1: Load feeds and topics
@@ -93,7 +108,11 @@ async def main():
             sys.exit(0)
 
         # Initialize AI and Slack clients only when needed
-        summarizer = ClaudeSummarizer(ANTHROPIC_API_KEY)
+        summarizer = ClaudeSummarizer(
+            ANTHROPIC_API_KEY,
+            summarization_model=SUMMARIZATION_MODEL,
+            digest_model=DIGEST_MODEL
+        )
         slack_poster = SlackPoster(SLACK_TOKEN, SLACK_WEBHOOK)
 
         # Step 5: Generate summaries

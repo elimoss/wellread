@@ -9,7 +9,7 @@ An intelligent RSS feed monitoring Slackbot that curates and summarizes content 
 - 🎯 **Semantic Curation**: Uses OpenAI embeddings to find content semantically similar to your topics of interest
 - 🔢 **Configurable Limits**: Set maximum number of articles to surface (default: 20, ordered by relevance)
 - ✍️ **AI Summaries**: Uses Claude to generate concise, insightful summaries for each item
-- 💬 **Threaded Slack Posts**: Posts a daily digest, with each paper in its own thread containing an AI summary
+- 💬 **Clean Slack Layout**: Each paper posted as a top-level message with AI summary in thread; digest summary posted at the end
 - 🤖 **GitHub Actions**: Runs automatically on schedule via GitHub Actions
 
 ## Setup
@@ -72,12 +72,20 @@ Edit `config.json` to adjust settings:
 ```json
 {
   "timeframe_hours": 24,
-  "max_items": 20
+  "max_items": 20,
+  "embedding_cache_dir": "cache/embeddings",
+  "llm_models": {
+    "summarization": "claude-sonnet-4-5-20250929",
+    "digest": "claude-sonnet-4-5-20250929"
+  }
 }
 ```
 
 - `timeframe_hours`: How far back to look for new posts (default: 24)
 - `max_items`: Maximum number of articles to surface, ordered by semantic relevance (default: 20)
+- `embedding_cache_dir`: Directory for caching OpenAI embeddings (default: cache/embeddings)
+- `llm_models.summarization`: Claude model for individual article summaries (default: claude-sonnet-4-5-20250929)
+- `llm_models.digest`: Claude model for overall digest (default: claude-sonnet-4-5-20250929)
 
 ### 6. Set Up Slack
 
@@ -110,7 +118,7 @@ In Slack, right-click your target channel → "View channel details" → Copy th
 2. Create a new API key
 3. Copy the key (starts with `sk-`)
 
-**Note**: The bot uses `text-embedding-3-small` for semantic similarity. Cost is ~$0.02 per 1M tokens.
+**Note**: The bot uses `text-embedding-3-small` for semantic similarity. Cost is ~$0.02 per 1M tokens. Embeddings are cached locally and in GitHub Actions to minimize API calls.
 
 ### 8. Get Anthropic API Key
 
@@ -163,7 +171,7 @@ Or trigger manually in GitHub Actions:
 2. **Filter**: Keeps only items from the configured timeframe
 3. **Curate**: Uses OpenAI embeddings to calculate semantic similarity between article titles and topics in `topics.txt`, then ranks by relevance and limits to top N items
 4. **Summarize**: Uses Claude to generate summaries for curated items
-5. **Post**: Creates a Slack digest with each paper in a thread containing its summary
+5. **Post**: Posts each paper as a top-level Slack message with AI summary in thread, then posts overall digest summary at the end
 
 ## Project Structure
 
@@ -182,10 +190,50 @@ wellread/
 ├── topics.txt             # Topics of interest
 ├── config.json            # Configuration
 ├── pyproject.toml         # Project metadata and dependencies
-└── uv.lock                # Locked dependencies (auto-generated)
+├── uv.lock                # Locked dependencies (auto-generated)
+└── cache/
+    └── embeddings/        # Persistent embedding cache (ignored by git)
+```
+
+## Caching
+
+The bot automatically caches OpenAI embeddings to minimize API costs:
+
+- **Local Development**: Cache stored in `cache/embeddings/` (gitignored)
+- **GitHub Actions**: Cache persists across workflow runs (expires after 7 days of inactivity)
+- **Cache Key**: Embeddings are keyed by `model:text_hash` to handle model upgrades
+- **Benefits**: Topics are typically cached permanently; recurring articles skip re-embedding
+
+View cache stats in the bot output:
+```
+Topic embeddings: 6 cached, 0 new
+Article embeddings: 42 cached, 8 new
+Total API calls saved: 48
 ```
 
 ## Customization
+
+### Adjust Model Selection
+
+Edit `config.json` to change Claude models:
+
+```json
+{
+  "llm_models": {
+    "summarization": "claude-3-5-haiku-20241022",  // Faster, cheaper
+    "digest": "claude-sonnet-4-5-20250929"         // Higher quality
+  }
+}
+```
+
+Available models:
+- `claude-sonnet-4-5-20250929` - Best quality (default)
+- `claude-3-5-sonnet-20241022` - Good balance
+- `claude-3-5-haiku-20241022` - Fast and cheap
+
+Or use environment variables:
+- `SUMMARIZATION_MODEL` - Override summarization model
+- `DIGEST_MODEL` - Override digest model
 
 ### Adjust Curation Parameters
 
@@ -194,7 +242,7 @@ Edit `config.json` or use environment variables:
 - `max_items`: Change how many articles to surface
 - `timeframe_hours`: Adjust lookback period
 
-To change the embedding model or similarity calculation, edit `src/curator.py`:
+To change the embedding model, edit `src/curator.py`:
 
 ```python
 def __init__(self, openai_api_key: str):

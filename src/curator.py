@@ -1,16 +1,20 @@
 import asyncio
+import hashlib
 from typing import List, Dict, Any
 
 import numpy as np
 from openai import OpenAI
 from tqdm import tqdm
+from diskcache import Cache
 
 
 class ContentCurator:
-    def __init__(self, openai_api_key: str):
+    def __init__(self, openai_api_key: str, cache_dir: str = "cache/embeddings"):
         self.client = OpenAI(api_key=openai_api_key)
         self.embedding_model = "text-embedding-3-small"
-        self.topic_embeddings_cache = {}
+        self.cache = Cache(cache_dir)
+        self.cache_hits = 0
+        self.cache_misses = 0
 
     async def load_topics(self, topics_file: str = 'topics.txt') -> List[str]:
         """Load topics from a text file."""
@@ -23,13 +27,33 @@ class ContentCurator:
             if line.strip() and not line.strip().startswith('#')
         ]
 
+    def _get_cache_key(self, text: str) -> str:
+        """Generate cache key from text and model."""
+        text_hash = hashlib.sha256(text.encode('utf-8')).hexdigest()[:16]
+        return f"{self.embedding_model}:{text_hash}"
+
     def get_embedding(self, text: str) -> List[float]:
-        """Get OpenAI embedding for a text string."""
+        """Get OpenAI embedding for a text string, with caching."""
+        cache_key = self._get_cache_key(text)
+
+        # Check cache first
+        cached_embedding = self.cache.get(cache_key)
+        if cached_embedding is not None:
+            self.cache_hits += 1
+            return cached_embedding
+
+        # Cache miss - call API
+        self.cache_misses += 1
         response = self.client.embeddings.create(
             model=self.embedding_model,
             input=text
         )
-        return response.data[0].embedding
+        embedding = response.data[0].embedding
+
+        # Store in cache
+        self.cache.set(cache_key, embedding, expire=None)  # Never expire
+
+        return embedding
 
     async def get_embedding_async(self, text: str) -> List[float]:
         """Get OpenAI embedding asynchronously."""
@@ -57,7 +81,7 @@ class ContentCurator:
         if not item_text:
             return 0.0
 
-        # Get embedding for the item
+        # Get embedding for the item (cached)
         item_embedding = await self.get_embedding_async(item_text)
 
         # Calculate maximum similarity to any topic
@@ -80,13 +104,22 @@ class ContentCurator:
         if not topics:
             return []
 
-        # Get embeddings for all topics
+        # Reset cache stats
+        self.cache_hits = 0
+        self.cache_misses = 0
+
+        # Get embeddings for all topics (cached)
         print(f"Getting embeddings for {len(topics)} topics...")
         topic_embeddings = []
         for topic in topics:
-            if topic not in self.topic_embeddings_cache:
-                self.topic_embeddings_cache[topic] = await self.get_embedding_async(topic)
-            topic_embeddings.append((topic, self.topic_embeddings_cache[topic]))
+            embedding = await self.get_embedding_async(topic)
+            topic_embeddings.append((topic, embedding))
+
+        print(f"Topic embeddings: {self.cache_hits} cached, {self.cache_misses} new")
+
+        # Reset for article embeddings
+        article_cache_hits = self.cache_hits
+        article_cache_misses = self.cache_misses
 
         # Calculate relevance scores for all items
         print(f"Calculating relevance scores for {len(items)} items...")
@@ -96,6 +129,11 @@ class ContentCurator:
             score = await self.calculate_relevance_score(item, topic_embeddings)
             item_copy['relevanceScore'] = score
             scored_items.append(item_copy)
+
+        article_cache_hits = self.cache_hits - article_cache_hits
+        article_cache_misses = self.cache_misses - article_cache_misses
+        print(f"Article embeddings: {article_cache_hits} cached, {article_cache_misses} new")
+        print(f"Total API calls saved: {self.cache_hits}")
 
         # Filter by minimum score
         filtered_items = [
@@ -123,4 +161,13 @@ class ContentCurator:
             'high': high_relevance,
             'medium': medium_relevance,
             'low': low_relevance
+        }
+
+    def get_cache_stats(self) -> Dict[str, Any]:
+        """Get cache statistics."""
+        return {
+            'size': len(self.cache),
+            'hits': self.cache_hits,
+            'misses': self.cache_misses,
+            'hit_rate': self.cache_hits / (self.cache_hits + self.cache_misses) if (self.cache_hits + self.cache_misses) > 0 else 0
         }
