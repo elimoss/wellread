@@ -54,6 +54,50 @@ class SlackPoster:
             print(f"Error posting header: {error.response['error']}")
             raise error
 
+    def format_summary_for_slack(self, summary: str) -> str:
+        """Format summary text for proper Slack markdown display."""
+        import re
+
+        # First, convert markdown headers to bold text
+        # Replace ## Header or # Header with *Header*
+        summary = re.sub(r'^#{1,6}\s+(.+)$', r'*\1*', summary, flags=re.MULTILINE)
+
+        # Convert **bold** to *bold* (Slack uses single asterisks for bold)
+        summary = re.sub(r'\*\*(.+?)\*\*', r'*\1*', summary)
+
+        # Ensure bullet points are properly formatted with line breaks
+        lines = summary.strip().split('\n')
+        formatted_lines = []
+
+        for line in lines:
+            # Preserve leading whitespace for indentation
+            stripped = line.strip()
+            if not stripped:
+                continue
+
+            # Count leading spaces for nested bullets
+            leading_spaces = len(line) - len(line.lstrip())
+            indent = ''
+            if leading_spaces >= 2:
+                # Nested bullet - add indentation
+                indent = '    '
+
+            # Replace bullet characters with Slack-compatible format
+            if stripped.startswith('•'):
+                formatted = indent + '• ' + stripped[1:].strip()
+            elif stripped.startswith('-'):
+                formatted = indent + '• ' + stripped[1:].strip()
+            elif stripped.startswith('*') and not stripped.startswith('**') and not stripped.endswith('*'):
+                # Only treat as bullet if it's a single asterisk at start (not bold markers)
+                formatted = indent + '• ' + stripped[1:].strip()
+            else:
+                # No bullet character found, treat as regular text
+                formatted = line.strip()
+
+            formatted_lines.append(formatted)
+
+        return '\n'.join(formatted_lines)
+
     async def post_paper_with_summary(self, channel: str, paper: Dict[str, Any], index: int, total: int) -> str:
         """Post a single paper as a top-level message with summary included."""
         try:
@@ -72,8 +116,9 @@ class SlackPoster:
                 except Exception:
                     pub_date = 'Unknown date'
 
-            # Get summary
+            # Get and format summary
             summary = paper.get('summary', 'No summary available')
+            formatted_summary = self.format_summary_for_slack(summary)
 
             # Post the paper with summary as top-level message
             paper_message = {
@@ -84,7 +129,7 @@ class SlackPoster:
                         'type': 'section',
                         'text': {
                             'type': 'mrkdwn',
-                            'text': f"*{index}/{total}: <{paper.get('link', '')}|{paper.get('title', 'No title')}>*\n\n{summary}"
+                            'text': f"*<{paper.get('link', '')}|{paper.get('title', 'No title')}>*\n\n{formatted_summary}"
                         }
                     },
                     {
@@ -92,7 +137,7 @@ class SlackPoster:
                         'elements': [
                             {
                                 'type': 'mrkdwn',
-                                'text': f"*Source:* {paper.get('feedSource', 'Unknown')} | *Published:* {pub_date}"
+                                'text': f"*{index}/{total}* • {paper.get('feedSource', 'Unknown')} • {pub_date}"
                             }
                         ]
                     }
@@ -127,13 +172,10 @@ class SlackPoster:
 
     async def post_digest_summary(self, channel: str, digest: str, item_count: int, paper_timestamps: List[str]) -> str:
         """Post the digest summary after all papers."""
-        today = datetime.now().strftime('%m/%d/%Y')
+        today = datetime.now().strftime('%B %d, %Y')
 
-        # Create links to the papers using their timestamps
-        paper_links = '\n'.join([
-            f"• <https://slack.com/archives/{channel}/p{ts.replace('.', '')}|Paper {i+1}>"
-            for i, ts in enumerate(paper_timestamps[:10])  # Limit to first 10 links
-        ])
+        # Format digest for Slack
+        formatted_digest = self.format_summary_for_slack(digest)
 
         message = {
             'channel': channel,
@@ -143,14 +185,14 @@ class SlackPoster:
                     'type': 'header',
                     'text': {
                         'type': 'plain_text',
-                        'text': f"📰 Daily Research Digest - {today}"
+                        'text': f"📊 Topic Summary"
                     }
                 },
                 {
                     'type': 'section',
                     'text': {
                         'type': 'mrkdwn',
-                        'text': f"*Summary of {item_count} curated items:*\n\n{digest}"
+                        'text': formatted_digest
                     }
                 },
                 {
@@ -161,7 +203,7 @@ class SlackPoster:
                     'elements': [
                         {
                             'type': 'mrkdwn',
-                            'text': f"Scroll up to see all {item_count} articles ☝️"
+                            'text': f"_{today}_ • {item_count} articles curated"
                         }
                     ]
                 }

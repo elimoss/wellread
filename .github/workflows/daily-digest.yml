@@ -1,0 +1,53 @@
+name: Daily RSS Digest
+
+on:
+  schedule:
+    # Run daily at 9 AM UTC (adjust to your preference)
+    - cron: '0 9 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  run-digest:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Cache embeddings
+        uses: actions/cache@v4
+        with:
+          path: cache/embeddings
+          key: embeddings-${{ hashFiles('topics.txt') }}
+          restore-keys: |
+            embeddings-
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run WellRead Bot
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          TIMEFRAME_HOURS: ${{ secrets.TIMEFRAME_HOURS || '24' }}
+          MAX_ITEMS: ${{ secrets.MAX_ITEMS || '20' }}
+        run: uv run python src/main.py
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-logs
+          path: '*.log'
+          if-no-files-found: ignore
