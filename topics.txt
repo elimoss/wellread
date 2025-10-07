@@ -4,6 +4,9 @@
 # Lines starting with # are comments.
 
 ai agents
+agent evaluation and benchmarking
+reasoning models
+reinforcement learning
 metagenomics
 protein discovery
 insertion sequences

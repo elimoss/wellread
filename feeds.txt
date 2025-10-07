@@ -2,13 +2,22 @@
 # Generated based on topics: AI agents, metagenomics, protein discovery,
 # protein language models, DNA language models, protein folding, genome engineering
 
+# === CNS ===
+# Cell
+https://www.cell.com/cell/current.rss
+# Nature
+http://feeds.nature.com/nature/rss/current
+# Science
+https://science.org/rss/news_current.xml
+
 # === AI and Machine Learning ===
+# these are generally not too relevant
 # ArXiv Computer Science - AI
-https://arxiv.org/rss/cs.AI
+# https://arxiv.org/rss/cs.AI
 # ArXiv Computer Science - Machine Learning
-https://arxiv.org/rss/cs.LG
+# https://arxiv.org/rss/cs.LG
 # ArXiv Computer Science - Computation and Language (for language models)
-https://arxiv.org/rss/cs.CL
+# https://arxiv.org/rss/cs.CL
 
 # === Computational Biology and Bioinformatics ===
 # ArXiv Quantitative Biology - Quantitative Methods
@@ -52,8 +61,8 @@ https://connect.biorxiv.org/biorxiv_xml.php?subject=systems-biology
 
 # === Other Relevant Sources ===
 # Nucleic Acids Research
-https://academic.oup.com/rss/site_5488/3326.xml
+# https://academic.oup.com/rss/site_5488/3326.xml  # this is broken
 # Bioinformatics (Oxford)
-https://academic.oup.com/rss/site_5476/3319.xml
+#  https://academic.oup.com/rss/site_5476/3319.xml  # also broken
 # Genome Biology
 https://genomebiology.biomedcentral.com/articles/most-recent/rss.xml

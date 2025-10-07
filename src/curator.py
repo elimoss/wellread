@@ -98,7 +98,7 @@ class ContentCurator:
         items: List[Dict[str, Any]],
         topics: List[str],
         min_score: float = 0.1,
-        max_items: int = None
+        max_items_to_post: int = None
     ) -> List[Dict[str, Any]]:
         """Curate items by scoring based on semantic similarity to topics."""
         if not topics:
@@ -145,9 +145,9 @@ class ContentCurator:
         # Sort by relevance score (highest first)
         filtered_items.sort(key=lambda x: x['relevanceScore'], reverse=True)
 
-        # Limit to max_items if specified
-        if max_items and len(filtered_items) > max_items:
-            filtered_items = filtered_items[:max_items]
+        # Limit to max_items_to_post if specified
+        if max_items_to_post and len(filtered_items) > max_items_to_post:
+            filtered_items = filtered_items[:max_items_to_post]
 
         return filtered_items
 

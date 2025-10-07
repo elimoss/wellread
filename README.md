@@ -7,7 +7,7 @@ An intelligent RSS feed monitoring Slackbot that curates and summarizes content 
 - 📡 **RSS Feed Monitoring**: Monitors multiple RSS feeds from a configurable text file
 - ⏰ **Configurable Timeframe**: Aggregates posts over a customizable period (default: 24 hours)
 - 🎯 **Semantic Curation**: Uses OpenAI embeddings to find content semantically similar to your topics of interest
-- 🔢 **Configurable Limits**: Set maximum number of articles to surface (default: 20, ordered by relevance)
+- 🔢 **Configurable Limits**: Set maximum number of articles to post (default: 20, ordered by relevance)
 - ✍️ **AI Summaries**: Uses Claude to generate concise, insightful summaries for each item
 - 💬 **Clean Slack Layout**: Each paper posted as a top-level message with AI summary in thread; digest summary posted at the end
 - 🤖 **GitHub Actions**: Runs automatically on schedule via GitHub Actions
@@ -91,7 +91,10 @@ Edit `config.json` to adjust settings:
 ```json
 {
   "timeframe_hours": 24,
-  "max_items": 20,
+  "max_items_to_post": 20,
+  "min_relevance_score": 0.1,
+  "cache_posted_articles": true,
+  "posted_articles_cache_file": "cache/posted_articles.json",
   "embedding_cache_dir": "cache/embeddings",
   "llm_models": {
     "summarization": "claude-sonnet-4-5-20250929",
@@ -101,7 +104,10 @@ Edit `config.json` to adjust settings:
 ```
 
 - `timeframe_hours`: How far back to look for new posts (default: 24)
-- `max_items`: Maximum number of articles to surface, ordered by semantic relevance (default: 20)
+- `max_items_to_post`: Maximum number of articles to post (default: 20)
+- `min_relevance_score`: Minimum semantic similarity score (0-100) for articles to be included (default: 0.1)
+- `cache_posted_articles`: Whether to cache posted articles to avoid reposting (default: true)
+- `posted_articles_cache_file`: File path for the posted articles cache (default: cache/posted_articles.json)
 - `embedding_cache_dir`: Directory for caching OpenAI embeddings (default: cache/embeddings)
 - `llm_models.summarization`: Claude model for individual article summaries (default: claude-sonnet-4-5-20250929)
 - `llm_models.digest`: Claude model for overall digest (default: claude-sonnet-4-5-20250929)
@@ -155,7 +161,7 @@ In your GitHub repository, go to Settings → Secrets and variables → Actions,
 - `SLACK_CHANNEL`: Your Slack channel ID (e.g., C01234ABCD)
 - `SLACK_WEBHOOK`: (Optional) Slack webhook URL
 - `TIMEFRAME_HOURS`: (Optional) Override default timeframe (e.g., 48)
-- `MAX_ITEMS`: (Optional) Override maximum items to surface (e.g., 10)
+- `MAX_ITEMS_TO_POST`: (Optional) Override maximum items to post (e.g., 10)
 
 ### 10. Configure Schedule
 
@@ -187,10 +193,13 @@ Or trigger manually in GitHub Actions:
 ## How It Works
 
 1. **Fetch**: Retrieves items from all RSS feeds in `feeds.txt`
-2. **Filter**: Keeps only items from the configured timeframe
-3. **Curate**: Uses OpenAI embeddings to calculate semantic similarity between article titles and topics in `topics.txt`, then ranks by relevance and limits to top N items
-4. **Summarize**: Uses Claude to generate summaries for curated items
-5. **Post**: Posts each paper as a top-level Slack message with AI summary in thread, then posts overall digest summary at the end
+2. **Deduplicate**: Removes duplicate articles within the current run (based on URL)
+3. **Filter by Time**: Keeps only items from the configured timeframe
+4. **Filter Previously Posted**: Removes articles that have been posted before (if caching enabled)
+5. **Curate**: Uses OpenAI embeddings to calculate semantic similarity between article titles and topics in `topics.txt`, then ranks by relevance and limits to top N items
+6. **Summarize**: Uses Claude to generate summaries for curated items
+7. **Post**: Posts header, then each paper as a top-level Slack message with summary, then digest summary at the end
+8. **Cache**: Saves posted article URLs to prevent reposting
 
 ## Project Structure
 
@@ -201,7 +210,8 @@ wellread/
 │   ├── rss_parser.py      # RSS feed fetching and parsing
 │   ├── curator.py         # Content curation logic
 │   ├── summarizer.py      # Claude AI integration
-│   └── slack_poster.py    # Slack posting with threading
+│   ├── slack_poster.py    # Slack posting with threading
+│   └── article_cache.py   # Posted articles cache management
 ├── .github/
 │   └── workflows/
 │       └── daily-digest.yml  # GitHub Actions workflow
@@ -211,12 +221,17 @@ wellread/
 ├── pyproject.toml         # Project metadata and dependencies
 ├── uv.lock                # Locked dependencies (auto-generated)
 └── cache/
-    └── embeddings/        # Persistent embedding cache (ignored by git)
+    ├── embeddings/        # OpenAI embeddings cache (gitignored)
+    └── posted_articles.json  # Posted articles cache (gitignored)
 ```
 
 ## Caching
 
-The bot automatically caches OpenAI embeddings to minimize API costs:
+The bot uses two types of caching to optimize performance and avoid reposting:
+
+### OpenAI Embeddings Cache
+
+Automatically caches OpenAI embeddings to minimize API costs:
 
 - **Local Development**: Cache stored in `cache/embeddings/` (gitignored)
 - **GitHub Actions**: Cache persists across workflow runs (expires after 7 days of inactivity)
@@ -228,6 +243,23 @@ View cache stats in the bot output:
 Topic embeddings: 6 cached, 0 new
 Article embeddings: 42 cached, 8 new
 Total API calls saved: 48
+```
+
+### Posted Articles Cache
+
+Tracks previously posted articles to avoid reposting (enabled by default):
+
+- **Local Development**: Cache stored in `cache/posted_articles.json` (gitignored)
+- **GitHub Actions**: Cache persists across all workflow runs
+- **Cache Key**: Article URLs are stored in a JSON file
+- **Benefits**: Prevents duplicate posts even across multiple runs
+- **Configuration**: Can be disabled by setting `cache_posted_articles: false` in `config.json`
+
+When enabled, the bot logs:
+```
+📚 Loaded article cache with 47 previously posted articles
+🔍 Filtering out previously posted articles...
+15 unposted items (3 already posted)
 ```
 
 ## Customization
@@ -258,8 +290,9 @@ Or use environment variables:
 
 Edit `config.json` or use environment variables:
 
-- `max_items`: Change how many articles to surface
-- `timeframe_hours`: Adjust lookback period
+- `max_items_to_post`: Maximum number of articles to post (use `MAX_ITEMS_TO_POST` env var)
+- `timeframe_hours`: Adjust lookback period (use `TIMEFRAME_HOURS` env var)
+- `min_relevance_score`: Minimum relevance threshold (use `MIN_RELEVANCE_SCORE` env var)
 
 To change the embedding model, edit `src/curator.py`:
 

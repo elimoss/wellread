@@ -22,6 +22,14 @@ jobs:
           restore-keys: |
             embeddings-
 
+      - name: Cache posted articles
+        uses: actions/cache@v4
+        with:
+          path: cache/posted_articles.json
+          key: posted-articles-${{ github.run_number }}
+          restore-keys: |
+            posted-articles-
+
       - name: Setup uv
         uses: astral-sh/setup-uv@v4
         with:
@@ -41,7 +49,7 @@ jobs:
           SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           TIMEFRAME_HOURS: ${{ secrets.TIMEFRAME_HOURS || '24' }}
-          MAX_ITEMS: ${{ secrets.MAX_ITEMS || '20' }}
+          MAX_ITEMS_TO_POST: ${{ secrets.MAX_ITEMS_TO_POST || '20' }}
         run: uv run python src/main.py
 
       - name: Upload logs on failure
