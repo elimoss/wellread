@@ -3,7 +3,6 @@
 # The bot will prioritize posts related to these topics
 # Lines starting with # are comments.
 
-# Example topics (replace with your own):
 ai agents
 metagenomics
 protein discovery
@@ -11,3 +10,7 @@ insertion sequences
 mobile genetic elements
 recombinases
 protein language models
+dna language models
+protein folding
+genome engineering
+vault particles

@@ -12,9 +12,26 @@ An intelligent RSS feed monitoring Slackbot that curates and summarizes content 
 - 💬 **Clean Slack Layout**: Each paper posted as a top-level message with AI summary in thread; digest summary posted at the end
 - 🤖 **GitHub Actions**: Runs automatically on schedule via GitHub Actions
 
+## Getting Started
+
+### Fork This Repository
+
+**Important:** You should fork this repository to your own GitHub account rather than cloning it directly. This allows:
+
+- GitHub Actions to run automatically on your schedule
+- Persistent embedding cache across workflow runs
+- Easy customization and updates specific to your needs
+
+**To fork:**
+1. Click the "Fork" button at the top right of this repository
+2. Select your GitHub account as the destination
+3. GitHub will create a copy of this repository under your account
+
+Once forked, you can clone your fork and configure it following the setup instructions below.
+
 ## Setup
 
-### 1. Clone and Install
+### 1. Clone Your Fork and Install
 
 First, install [uv](https://docs.astral.sh/uv/getting-started/installation/) if you haven't already:
 
@@ -26,13 +43,15 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
-Then clone and install dependencies:
+Then clone your forked repository and install dependencies:
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/YOUR-USERNAME/wellread.git
 cd wellread
 uv sync
 ```
+
+Replace `YOUR-USERNAME` with your GitHub username.
 
 ### 2. Install Git Hooks (Optional but Recommended)
 

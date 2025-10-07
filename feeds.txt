@@ -1,5 +1,59 @@
-# RSS Feeds to Monitor
-# Add one feed URL per line. Lines starting with # are comments.
+# Curated RSS Feeds for AI Agents and Computational Biology Topics
+# Generated based on topics: AI agents, metagenomics, protein discovery,
+# protein language models, DNA language models, protein folding, genome engineering
 
-# Example feeds (replace with your own):
+# === AI and Machine Learning ===
+# ArXiv Computer Science - AI
+https://arxiv.org/rss/cs.AI
+# ArXiv Computer Science - Machine Learning
+https://arxiv.org/rss/cs.LG
+# ArXiv Computer Science - Computation and Language (for language models)
+https://arxiv.org/rss/cs.CL
+
+# === Computational Biology and Bioinformatics ===
+# ArXiv Quantitative Biology - Quantitative Methods
+https://arxiv.org/rss/q-bio.QM
+# ArXiv Quantitative Biology - Genomics
+https://arxiv.org/rss/q-bio.GN
+# ArXiv Quantitative Biology - Biomolecules
+https://arxiv.org/rss/q-bio.BM
+
+# === Nature Journals ===
+# Nature Biotechnology
 http://feeds.nature.com/nbt/rss/current
+# Nature Methods
+http://feeds.nature.com/nmeth/rss/current
+# Nature Machine Intelligence
+http://feeds.nature.com/natmachintell/rss/current
+# Nature Computational Science
+http://feeds.nature.com/natcomputsci/rss/current
+
+# === Science Journals ===
+# Science - Computational Biology section
+https://www.science.org/rss/news_current.xml
+
+# === PLoS Journals ===
+# PLoS Computational Biology
+https://journals.plos.org/ploscompbiol/feed/atom
+# PLoS Biology
+https://journals.plos.org/plosbiology/feed/atom
+# PLoS Genetics
+https://journals.plos.org/plosgenetics/feed/atom
+
+# === bioRxiv Preprints ===
+# bioRxiv - Bioinformatics
+https://connect.biorxiv.org/biorxiv_xml.php?subject=bioinformatics
+# bioRxiv - Genomics
+https://connect.biorxiv.org/biorxiv_xml.php?subject=genomics
+# bioRxiv - Synthetic Biology
+https://connect.biorxiv.org/biorxiv_xml.php?subject=synthetic-biology
+# bioRxiv - Systems Biology
+https://connect.biorxiv.org/biorxiv_xml.php?subject=systems-biology
+
+# === Other Relevant Sources ===
+# Nucleic Acids Research
+https://academic.oup.com/rss/site_5488/3326.xml
+# Bioinformatics (Oxford)
+https://academic.oup.com/rss/site_5476/3319.xml
+# Genome Biology
+https://genomebiology.biomedcentral.com/articles/most-recent/rss.xml
