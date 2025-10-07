@@ -170,59 +170,8 @@ class SlackPoster:
 
         return timestamps
 
-    async def post_digest_summary(self, channel: str, digest: str, item_count: int, paper_timestamps: List[str]) -> str:
-        """Post the digest summary after all papers."""
-        today = datetime.now().strftime('%B %d, %Y')
-
-        # Format digest for Slack
-        formatted_digest = self.format_summary_for_slack(digest)
-
-        message = {
-            'channel': channel,
-            'text': f"📰 Daily Research Digest - {today}",
-            'blocks': [
-                {
-                    'type': 'header',
-                    'text': {
-                        'type': 'plain_text',
-                        'text': f"📊 Topic Summary"
-                    }
-                },
-                {
-                    'type': 'section',
-                    'text': {
-                        'type': 'mrkdwn',
-                        'text': formatted_digest
-                    }
-                },
-                {
-                    'type': 'divider'
-                },
-                {
-                    'type': 'context',
-                    'elements': [
-                        {
-                            'type': 'mrkdwn',
-                            'text': f"_{today}_ • {item_count} articles curated"
-                        }
-                    ]
-                }
-            ]
-        }
-
-        try:
-            loop = asyncio.get_event_loop()
-            result = await loop.run_in_executor(
-                None,
-                lambda: self.client.chat_postMessage(**message)
-            )
-            return result['ts']
-        except SlackApiError as error:
-            print(f"Error posting digest: {error.response['error']}")
-            raise error
-
-    async def post_complete_digest(self, channel: str, digest: str, papers: List[Dict[str, Any]]):
-        """Post header, then all papers, then the digest summary."""
+    async def post_papers(self, channel: str, papers: List[Dict[str, Any]]):
+        """Post header, then all papers."""
         print(f"Posting header to channel {channel}...")
         await self.post_header(channel)
 
@@ -232,11 +181,6 @@ class SlackPoster:
         print(f"Posting {len(papers)} papers...")
 
         # Post each paper as a top-level message
-        paper_timestamps = await self.post_all_papers(channel, papers)
+        await self.post_all_papers(channel, papers)
 
-        print(f"All papers posted. Now posting digest summary...")
-
-        # Post the digest after all papers
-        await self.post_digest_summary(channel, digest, len(papers), paper_timestamps)
-
-        print('Digest complete!')
+        print('All papers posted!')

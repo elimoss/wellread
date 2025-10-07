@@ -7,7 +7,7 @@ An intelligent RSS feed monitoring Slackbot that curates and summarizes content 
 - 📡 **RSS Feed Monitoring**: Monitors multiple RSS feeds from a configurable text file
 - 🎯 **Semantic Curation**: Uses semantic embeddings to find content semantically similar to your topics of interest
 - ✍️ **AI Summaries**: Uses Claude to generate concise, insightful summaries for each item
-- 💬 **Clean Slack Layout**: Each paper posted as a top-level message with AI summary in thread; digest summary posted at the end
+- 💬 **Clean Slack Layout**: Each paper posted as a top-level message with AI summary
 - 🤖 **GitHub Actions**: Runs automatically on schedule via GitHub Actions
 
 ## Getting Started
@@ -95,8 +95,7 @@ Edit `config.json` to adjust settings:
   "posted_articles_cache_file": "cache/posted_articles.json",
   "embedding_cache_dir": "cache/embeddings",
   "llm_models": {
-    "summarization": "claude-sonnet-4-5-20250929",
-    "digest": "claude-sonnet-4-5-20250929"
+    "summarization": "claude-sonnet-4-5-20250929"
   }
 }
 ```
@@ -107,8 +106,7 @@ Edit `config.json` to adjust settings:
 - `cache_posted_articles`: Whether to cache posted articles to avoid reposting (default: true)
 - `posted_articles_cache_file`: File path for the posted articles cache (default: cache/posted_articles.json)
 - `embedding_cache_dir`: Directory for caching OpenAI embeddings (default: cache/embeddings)
-- `llm_models.summarization`: Claude model for individual article summaries (default: claude-sonnet-4-5-20250929)
-- `llm_models.digest`: Claude model for overall digest (default: claude-sonnet-4-5-20250929)
+- `llm_models.summarization`: Claude model for article summaries (default: claude-sonnet-4-5-20250929)
 
 ### 6. Set Up Slack
 
@@ -185,7 +183,7 @@ uv run python src/main.py
 
 Or trigger manually in GitHub Actions:
 1. Go to Actions tab
-2. Select "Daily RSS Digest"
+2. Select "Daily RSS Digest" workflow
 3. Click "Run workflow"
 
 ## How It Works
@@ -196,7 +194,7 @@ Or trigger manually in GitHub Actions:
 4. **Filter Previously Posted**: Removes articles that have been posted before (if caching enabled)
 5. **Curate**: Uses OpenAI embeddings to calculate semantic similarity between article titles and topics in `topics.txt`, then ranks by relevance and limits to top N items
 6. **Summarize**: Uses Claude to generate summaries for curated items
-7. **Post**: Posts header, then each paper as a top-level Slack message with summary, then digest summary at the end
+7. **Post**: Posts header, then each paper as a top-level Slack message with summary
 8. **Cache**: Saves posted article URLs to prevent reposting
 
 ## Project Structure
@@ -264,13 +262,12 @@ When enabled, the bot logs:
 
 ### Adjust Model Selection
 
-Edit `config.json` to change Claude models:
+Edit `config.json` to change Claude model:
 
 ```json
 {
   "llm_models": {
-    "summarization": "claude-3-5-haiku-20241022",  // Faster, cheaper
-    "digest": "claude-sonnet-4-5-20250929"         // Higher quality
+    "summarization": "claude-3-5-haiku-20241022"
   }
 }
 ```
@@ -279,9 +276,8 @@ Available models:
 - `claude-sonnet-4-5-20250929` - Best quality (default)
 - `claude-3-5-haiku-20241022` - Fast and cheap
 
-Or use environment variables:
+Or use environment variable:
 - `SUMMARIZATION_MODEL` - Override summarization model
-- `DIGEST_MODEL` - Override digest model
 
 ### Adjust Curation Parameters
 

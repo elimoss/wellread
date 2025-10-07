@@ -42,11 +42,10 @@ async def main():
         print('⚠️  Using default configuration')
         config = {
             'timeframe_hours': 24,
-            'max_items': 20,
+            'max_items_to_post': 20,
             'embedding_cache_dir': 'cache/embeddings',
             'llm_models': {
-                'summarization': 'claude-sonnet-4-5-20250929',
-                'digest': 'claude-sonnet-4-5-20250929'
+                'summarization': 'claude-sonnet-4-5-20250929'
             }
         }
 
@@ -62,11 +61,10 @@ async def main():
     # Get LLM model configurations
     llm_models = config.get('llm_models', {})
     SUMMARIZATION_MODEL = os.environ.get('SUMMARIZATION_MODEL', llm_models.get('summarization', 'claude-sonnet-4-5-20250929'))
-    DIGEST_MODEL = os.environ.get('DIGEST_MODEL', llm_models.get('digest', 'claude-sonnet-4-5-20250929'))
 
     print(f'⏰ Looking for posts from the last {TIMEFRAME_HOURS} hours')
     print(f'📊 Maximum items to post: {MAX_ITEMS_TO_POST}')
-    print(f'🤖 Using models: {SUMMARIZATION_MODEL} (summaries), {DIGEST_MODEL} (digest)')
+    print(f'🤖 Using model: {SUMMARIZATION_MODEL}')
     if CACHE_POSTED_ARTICLES:
         print(f'💾 Article cache enabled')
 
@@ -142,8 +140,7 @@ async def main():
         # Initialize AI and Slack clients only when needed
         summarizer = ClaudeSummarizer(
             ANTHROPIC_API_KEY,
-            summarization_model=SUMMARIZATION_MODEL,
-            digest_model=DIGEST_MODEL
+            summarization_model=SUMMARIZATION_MODEL
         )
         slack_poster = SlackPoster(SLACK_TOKEN, SLACK_WEBHOOK)
 
@@ -151,15 +148,11 @@ async def main():
         print('✍️  Generating AI summaries...')
         items_with_summaries = await summarizer.summarize_batch(curated_items, topics)
 
-        # Step 8: Generate digest
-        print('📝 Generating digest...')
-        digest = await summarizer.generate_digest(items_with_summaries, topics)
-
-        # Step 9: Post to Slack
+        # Step 8: Post to Slack
         print('📤 Posting to Slack...')
-        await slack_poster.post_complete_digest(SLACK_CHANNEL, digest, items_with_summaries)
+        await slack_poster.post_papers(SLACK_CHANNEL, items_with_summaries)
 
-        # Step 10: Cache posted article URLs (if cache enabled)
+        # Step 9: Cache posted article URLs (if cache enabled)
         if article_cache:
             posted_urls = [item.get('link') for item in items_with_summaries if item.get('link')]
             article_cache.mark_batch_as_posted(posted_urls)

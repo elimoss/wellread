@@ -4,16 +4,15 @@ from anthropic import Anthropic
 
 
 class ClaudeSummarizer:
-    def __init__(self, api_key: str, summarization_model: str = "claude-sonnet-4-5-20250929", digest_model: str = "claude-sonnet-4-5-20250929"):
+    def __init__(self, api_key: str, summarization_model: str = "claude-sonnet-4-5-20250929"):
         self.client = Anthropic(api_key=api_key)
         self.summarization_model = summarization_model
-        self.digest_model = digest_model
 
     async def summarize_paper(self, item: Dict[str, Any], topics: List[str]) -> str:
         """Generate a summary for a single paper/item."""
         author_line = f"Author: {item['creator']}\n" if item.get('creator') else ""
 
-        prompt = f"""You are analyzing an RSS feed item for a research digest. Here are the details:
+        prompt = f"""You are analyzing an RSS feed item. Here are the details:
 
 Title: {item.get('title', 'No title')}
 Source: {item.get('feedSource', 'Unknown source')}
@@ -64,35 +63,3 @@ Provide a concise summary as 3 bullet points. Keep each bullet point to one conc
                 await asyncio.sleep(1)
 
         return results
-
-    async def generate_digest(self, items: List[Dict[str, Any]], topics: List[str]) -> str:
-        """Generate a digest summary for all items."""
-        items_list = '\n'.join([
-            f"{idx + 1}. {item.get('title', 'No title')} ({item.get('feedSource', 'Unknown source')})"
-            for idx, item in enumerate(items[:20])
-        ])
-
-        prompt = f"""Create a bullet point list for today's research roundup. Sparingly bold keywords with single asterisks. Tool/model/database/etc names are instead wrapped in backticks. Be concise and professional.
-Here are the curated items:
-
-{items_list}
-
-Topics of focus: {', '.join(topics)}
-
-"""
-
-        # Run in thread pool to avoid blocking
-        loop = asyncio.get_event_loop()
-        message = await loop.run_in_executor(
-            None,
-            lambda: self.client.messages.create(
-                model=self.digest_model,
-                max_tokens=250,
-                messages=[{
-                    'role': 'user',
-                    'content': prompt
-                }]
-            )
-        )
-
-        return message.content[0].text

@@ -2,12 +2,11 @@
   "timeframe_hours": 240,
   "cache_file": "cache/last_run.json",
   "max_items_to_post": 5,
-  "min_relevance_score": 50,
+  "min_relevance_score": 30,
   "cache_posted_articles": true,
   "posted_articles_cache_file": "cache/posted_articles.json",
   "embedding_cache_dir": "cache/embeddings",
   "llm_models": {
-    "summarization": "claude-sonnet-4-5-20250929",
-    "digest": "claude-sonnet-4-5-20250929"
+    "summarization": "claude-sonnet-4-5-20250929"
   }
 }
