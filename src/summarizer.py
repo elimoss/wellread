@@ -72,7 +72,7 @@ Provide a concise summary as 3 bullet points. Keep each bullet point to one conc
             for idx, item in enumerate(items[:20])
         ])
 
-        prompt = f"""Create a bullet point list for today's research roundup. Bold keywords with asterisks. Be concise and professional.
+        prompt = f"""Create a bullet point list for today's research roundup. Sparingly bold keywords with single asterisks. Tool/model/database/etc names are instead wrapped in backticks. Be concise and professional.
 Here are the curated items:
 
 {items_list}
