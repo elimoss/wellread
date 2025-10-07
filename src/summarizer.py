@@ -23,12 +23,7 @@ Content:
 
 Topics of interest: {', '.join(topics)}
 
-Please provide a concise, insightful summary (2-4 sentences) that:
-1. Explains the main contribution or finding
-2. Highlights why it's relevant to the topics of interest
-3. Notes any practical implications or applications
-
-Keep the tone professional but engaging."""
+Provide a concise summary as 3 bullet points. Keep each bullet point to one concise sentence. Be direct and professional."""
 
         # Run in thread pool to avoid blocking
         loop = asyncio.get_event_loop()
@@ -77,13 +72,14 @@ Keep the tone professional but engaging."""
             for idx, item in enumerate(items[:20])
         ])
 
-        prompt = f"""Create a brief digest summary (3-4 sentences) for today's research roundup. Here are the curated items:
+        prompt = f"""Create a bullet point topic list for today's research roundup, with each paper title as sub-bullets under the relevant topic. 
+Here are the curated items:
 
 {items_list}
 
 Topics of focus: {', '.join(topics)}
 
-Provide an engaging overview that highlights key themes and noteworthy developments."""
+"""
 
         # Run in thread pool to avoid blocking
         loop = asyncio.get_event_loop()

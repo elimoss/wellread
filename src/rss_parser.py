@@ -91,6 +91,22 @@ class RSSFeedParser:
 
         return all_items
 
+    def deduplicate_items(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Remove duplicate items based on link URL, keeping the first occurrence."""
+        seen_links = set()
+        deduplicated = []
+
+        for item in items:
+            link = item.get('link', '')
+            if link and link not in seen_links:
+                seen_links.add(link)
+                deduplicated.append(item)
+            elif not link:
+                # If there's no link, keep the item (don't deduplicate)
+                deduplicated.append(item)
+
+        return deduplicated
+
     def filter_by_timeframe(self, items: List[Dict[str, Any]], hours_ago: int = 24) -> List[Dict[str, Any]]:
         """Filter items to only those published within the specified timeframe."""
         # Use timezone-aware UTC time for comparison

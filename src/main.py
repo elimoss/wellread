@@ -51,6 +51,7 @@ async def main():
 
     TIMEFRAME_HOURS = int(os.environ.get('TIMEFRAME_HOURS', config.get('timeframe_hours', 24)))
     MAX_ITEMS = int(os.environ.get('MAX_ITEMS', config.get('max_items', 20)))
+    MIN_RELEVANCE_SCORE = float(os.environ.get('MIN_RELEVANCE_SCORE', config.get('min_relevance_score', 0.1)))
     EMBEDDING_CACHE_DIR = os.environ.get('EMBEDDING_CACHE_DIR', config.get('embedding_cache_dir', 'cache/embeddings'))
 
     # Get LLM model configurations
@@ -89,18 +90,24 @@ async def main():
         all_items = await feed_parser.fetch_all_feeds(feed_urls)
         print(f'Fetched {len(all_items)} total items')
 
-        # Step 3: Filter by timeframe
+        # Step 3: Deduplicate by link URL
+        print('🔗 Deduplicating items by link URL...')
+        deduplicated_items = feed_parser.deduplicate_items(all_items)
+        duplicates_removed = len(all_items) - len(deduplicated_items)
+        print(f'{len(deduplicated_items)} unique items ({duplicates_removed} duplicates removed)')
+
+        # Step 4: Filter by timeframe
         print(f'⏱️  Filtering items from last {TIMEFRAME_HOURS} hours...')
-        recent_items = feed_parser.filter_by_timeframe(all_items, TIMEFRAME_HOURS)
+        recent_items = feed_parser.filter_by_timeframe(deduplicated_items, TIMEFRAME_HOURS)
         print(f'Found {len(recent_items)} recent items')
 
         if len(recent_items) == 0:
             print('✅ No new items to report')
             sys.exit(0)
 
-        # Step 4: Curate based on topics using semantic similarity
+        # Step 5: Curate based on topics using semantic similarity
         print('🔎 Curating content based on semantic similarity to topics...')
-        curated_items = await curator.curate_items(recent_items, topics, max_items=MAX_ITEMS)
+        curated_items = await curator.curate_items(recent_items, topics, min_score=MIN_RELEVANCE_SCORE, max_items=MAX_ITEMS)
         print(f'Curated {len(curated_items)} relevant items')
 
         if len(curated_items) == 0:
@@ -115,15 +122,15 @@ async def main():
         )
         slack_poster = SlackPoster(SLACK_TOKEN, SLACK_WEBHOOK)
 
-        # Step 5: Generate summaries
+        # Step 6: Generate summaries
         print('✍️  Generating AI summaries...')
         items_with_summaries = await summarizer.summarize_batch(curated_items, topics)
 
-        # Step 6: Generate digest
+        # Step 7: Generate digest
         print('📝 Generating digest...')
         digest = await summarizer.generate_digest(items_with_summaries, topics)
 
-        # Step 7: Post to Slack
+        # Step 8: Post to Slack
         print('📤 Posting to Slack...')
         await slack_poster.post_complete_digest(SLACK_CHANNEL, digest, items_with_summaries)
 

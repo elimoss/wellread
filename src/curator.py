@@ -129,6 +129,7 @@ class ContentCurator:
             score = await self.calculate_relevance_score(item, topic_embeddings)
             item_copy['relevanceScore'] = score
             scored_items.append(item_copy)
+            print(f"Item: {item.get('title', 'No title')}, Score: {score:.2f}")
 
         article_cache_hits = self.cache_hits - article_cache_hits
         article_cache_misses = self.cache_misses - article_cache_misses

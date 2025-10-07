@@ -10,14 +10,53 @@ class SlackPoster:
         self.client = WebClient(token=token)
         self.webhook = webhook
 
-    async def post_paper_with_summary(self, channel: str, paper: Dict[str, Any], index: int, total: int) -> str:
-        """Post a single paper as a top-level message with summary in thread."""
-        try:
-            # Truncate description if too long
-            description = paper.get('description', 'No description available')
-            if description and len(description) > 300:
-                description = description[:300] + '...'
+    async def post_header(self, channel: str) -> str:
+        """Post a header message to separate from previous posts."""
+        today = datetime.now().strftime('%B %d, %Y at %I:%M %p')
 
+        message = {
+            'channel': channel,
+            'text': f"📰 WellRead Digest - {today}",
+            'blocks': [
+                {
+                    'type': 'divider'
+                },
+                {
+                    'type': 'header',
+                    'text': {
+                        'type': 'plain_text',
+                        'text': f"📰 WellRead Digest"
+                    }
+                },
+                {
+                    'type': 'context',
+                    'elements': [
+                        {
+                            'type': 'mrkdwn',
+                            'text': f"_{today}_"
+                        }
+                    ]
+                },
+                {
+                    'type': 'divider'
+                }
+            ]
+        }
+
+        try:
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                None,
+                lambda: self.client.chat_postMessage(**message)
+            )
+            return result['ts']
+        except SlackApiError as error:
+            print(f"Error posting header: {error.response['error']}")
+            raise error
+
+    async def post_paper_with_summary(self, channel: str, paper: Dict[str, Any], index: int, total: int) -> str:
+        """Post a single paper as a top-level message with summary included."""
+        try:
             # Format publication date
             pub_date = 'Unknown date'
             if paper.get('pubDate'):
@@ -33,7 +72,10 @@ class SlackPoster:
                 except Exception:
                     pub_date = 'Unknown date'
 
-            # Post the main paper info as top-level message
+            # Get summary
+            summary = paper.get('summary', 'No summary available')
+
+            # Post the paper with summary as top-level message
             paper_message = {
                 'channel': channel,
                 'text': paper.get('title', 'No title'),
@@ -42,28 +84,17 @@ class SlackPoster:
                         'type': 'section',
                         'text': {
                             'type': 'mrkdwn',
-                            'text': f"*{index}/{total}: {paper.get('title', 'No title')}*\n\n{description}"
+                            'text': f"*{index}/{total}: <{paper.get('link', '')}|{paper.get('title', 'No title')}>*\n\n{summary}"
                         }
                     },
                     {
-                        'type': 'section',
-                        'fields': [
+                        'type': 'context',
+                        'elements': [
                             {
                                 'type': 'mrkdwn',
-                                'text': f"*Source:*\n{paper.get('feedSource', 'Unknown')}"
-                            },
-                            {
-                                'type': 'mrkdwn',
-                                'text': f"*Published:*\n{pub_date}"
+                                'text': f"*Source:* {paper.get('feedSource', 'Unknown')} | *Published:* {pub_date}"
                             }
                         ]
-                    },
-                    {
-                        'type': 'section',
-                        'text': {
-                            'type': 'mrkdwn',
-                            'text': f"🔗 <{paper.get('link', '')}|Read more>"
-                        }
                     }
                 ]
             }
@@ -72,30 +103,6 @@ class SlackPoster:
             paper_result = await loop.run_in_executor(
                 None,
                 lambda: self.client.chat_postMessage(**paper_message)
-            )
-
-            # Small delay between messages
-            await asyncio.sleep(0.5)
-
-            # Post the summary as a reply in the thread
-            summary_message = {
-                'channel': channel,
-                'thread_ts': paper_result['ts'],  # Thread off the paper post
-                'text': f"📝 Summary: {paper.get('summary', 'No summary available')}",
-                'blocks': [
-                    {
-                        'type': 'section',
-                        'text': {
-                            'type': 'mrkdwn',
-                            'text': f"📝 *AI Summary*\n\n{paper.get('summary', 'No summary available')}"
-                        }
-                    }
-                ]
-            }
-
-            await loop.run_in_executor(
-                None,
-                lambda: self.client.chat_postMessage(**summary_message)
             )
 
             return paper_result['ts']
@@ -173,8 +180,14 @@ class SlackPoster:
             raise error
 
     async def post_complete_digest(self, channel: str, digest: str, papers: List[Dict[str, Any]]):
-        """Post all papers first, then the digest summary."""
-        print(f"Posting {len(papers)} papers to channel {channel}...")
+        """Post header, then all papers, then the digest summary."""
+        print(f"Posting header to channel {channel}...")
+        await self.post_header(channel)
+
+        # Small delay after header
+        await asyncio.sleep(1)
+
+        print(f"Posting {len(papers)} papers...")
 
         # Post each paper as a top-level message
         paper_timestamps = await self.post_all_papers(channel, papers)
