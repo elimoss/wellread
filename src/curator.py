@@ -11,7 +11,7 @@ from diskcache import Cache
 class ContentCurator:
     def __init__(self, openai_api_key: str, cache_dir: str = "cache/embeddings"):
         self.client = OpenAI(api_key=openai_api_key)
-        self.embedding_model = "text-embedding-3-small"
+        self.embedding_model = "text-embedding-3-large"
         self.cache = Cache(cache_dir)
         self.cache_hits = 0
         self.cache_misses = 0

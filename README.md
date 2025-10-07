@@ -1,13 +1,11 @@
-# WellRead Bot 📰🤖
+# WellRead 📰🤖
 
-An intelligent RSS feed monitoring Slackbot that curates and summarizes content based on your interests, powered by Claude AI.
+An intelligent RSS feed monitoring Slackbot that curates and summarizes content based on your interests.
 
 ## Features
 
 - 📡 **RSS Feed Monitoring**: Monitors multiple RSS feeds from a configurable text file
-- ⏰ **Configurable Timeframe**: Aggregates posts over a customizable period (default: 24 hours)
-- 🎯 **Semantic Curation**: Uses OpenAI embeddings to find content semantically similar to your topics of interest
-- 🔢 **Configurable Limits**: Set maximum number of articles to post (default: 20, ordered by relevance)
+- 🎯 **Semantic Curation**: Uses semantic embeddings to find content semantically similar to your topics of interest
 - ✍️ **AI Summaries**: Uses Claude to generate concise, insightful summaries for each item
 - 💬 **Clean Slack Layout**: Each paper posted as a top-level message with AI summary in thread; digest summary posted at the end
 - 🤖 **GitHub Actions**: Runs automatically on schedule via GitHub Actions
@@ -92,7 +90,7 @@ Edit `config.json` to adjust settings:
 {
   "timeframe_hours": 24,
   "max_items_to_post": 20,
-  "min_relevance_score": 0.1,
+  "min_relevance_score": 60,
   "cache_posted_articles": true,
   "posted_articles_cache_file": "cache/posted_articles.json",
   "embedding_cache_dir": "cache/embeddings",
@@ -105,7 +103,7 @@ Edit `config.json` to adjust settings:
 
 - `timeframe_hours`: How far back to look for new posts (default: 24)
 - `max_items_to_post`: Maximum number of articles to post (default: 20)
-- `min_relevance_score`: Minimum semantic similarity score (0-100) for articles to be included (default: 0.1)
+- `min_relevance_score`: Minimum semantic similarity score (0-100) for articles to be included (default: 60)
 - `cache_posted_articles`: Whether to cache posted articles to avoid reposting (default: true)
 - `posted_articles_cache_file`: File path for the posted articles cache (default: cache/posted_articles.json)
 - `embedding_cache_dir`: Directory for caching OpenAI embeddings (default: cache/embeddings)
@@ -279,7 +277,6 @@ Edit `config.json` to change Claude models:
 
 Available models:
 - `claude-sonnet-4-5-20250929` - Best quality (default)
-- `claude-3-5-sonnet-20241022` - Good balance
 - `claude-3-5-haiku-20241022` - Fast and cheap
 
 Or use environment variables:
