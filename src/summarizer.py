@@ -22,7 +22,8 @@ Content:
 
 Topics of interest: {', '.join(topics)}
 
-Provide a concise summary as 3 bullet points. Keep each bullet point to one concise sentence. Be direct and professional."""
+The first line should identify the first author(s) and the last author as well as their institutional affiliation, if available. 
+Follow this with a concise summary as 3 bullet points. Keep each bullet point to one concise sentence. Be direct and professional."""
 
         # Run in thread pool to avoid blocking
         loop = asyncio.get_event_loop()
