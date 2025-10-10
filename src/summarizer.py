@@ -3,6 +3,7 @@ from typing import List, Dict, Any
 
 import tenacity
 from anthropic import Anthropic
+from tqdm import tqdm
 
 
 class ClaudeSummarizer:
@@ -11,8 +12,8 @@ class ClaudeSummarizer:
         self.summarization_model = summarization_model
 
     @tenacity.retry(
-        wait=tenacity.wait_fixed(2),
-        stop=tenacity.stop_after_attempt(3),
+        wait=tenacity.wait_fixed(0.1),
+        stop=tenacity.stop_after_attempt(10),
         reraise=True,
     )
     async def summarize_paper(self, item: Dict[str, Any], topics: List[str]) -> str:
@@ -46,33 +47,46 @@ Follow this with a concise summary as 3 bullet points. Keep each bullet point to
             )
         )
 
+        # Better error handling for empty content
+        if not message.content:
+            print(f"Empty content in API response. Stop reason: {message.stop_reason}.\n{message}\n{item.get('title')}")
+            if message.stop_reason == 'refusal':
+                return "Claude refused to summarize this one :("
+
+        if len(message.content) == 0:
+            print(f"No content blocks returned. Stop reason: {message.stop_reason}.\n{message}\n{item.get('title')}")
+            if message.stop_reason == 'refusal':
+                return "Claude refused to summarize this one :("
+
+        # Check if first content block has text
+        if not hasattr(message.content[0], 'text'):
+            print(f"Content block has no text attribute. Type: {type(message.content[0])}.\n{message}\n{item.get('title')}")
+
         return message.content[0].text
 
-    @tenacity.retry(
-        wait=tenacity.wait_fixed(2),
-        stop=tenacity.stop_after_attempt(3),
-        reraise=True,
-    )
-    async def summarize_batch(self, items: List[Dict[str, Any]], topics: List[str], max_concurrent: int = 3) -> List[Dict[str, Any]]:
+    async def summarize_batch(self, items: List[Dict[str, Any]], topics: List[str], max_concurrent: int = 3) -> List[
+        Dict[str, Any]]:
         """Summarize multiple items in batches."""
         results = []
 
-        for i in range(0, len(items), max_concurrent):
-            batch = items[i:i + max_concurrent]
+        with tqdm(total=len(items), desc="Summarizing papers", unit="paper") as pbar:
+            for i in range(0, len(items), max_concurrent):
+                batch = items[i:i + max_concurrent]
 
-            # Process batch concurrently
-            summaries = await asyncio.gather(
-                *[self.summarize_paper(item, topics) for item in batch]
-            )
+                # Process batch concurrently
+                summaries = await asyncio.gather(
+                    *[self.summarize_paper(item, topics) for item in batch]
+                )
 
-            # Add summaries to items
-            for item, summary in zip(batch, summaries):
-                result = item.copy()
-                result['summary'] = summary
-                results.append(result)
+                # Add summaries to items
+                for item, summary in zip(batch, summaries):
+                    result = item.copy()
+                    result['summary'] = summary
+                    results.append(result)
+                    pbar.update(1)
 
-            # Rate limiting: wait between batches
-            if i + max_concurrent < len(items):
-                await asyncio.sleep(1)
+                # Rate limiting: wait between batches
+                if i + max_concurrent < len(items):
+                    await asyncio.sleep(1)
 
         return results

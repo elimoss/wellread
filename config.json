@@ -7,7 +7,7 @@
   "posted_articles_cache_file": "cache/posted_articles.json",
   "embedding_cache_dir": "cache/embeddings",
   "shortlist_multiplier": 4,
-  "selection_guidance_prompt": "Select articles that are most relevant to the topics of interest. Articles need not be relevant to more than one topic, but multiple is better. Favor papers from reputable sources and well-known researchers.\n\nConsider:\n1. Relevance to at least one topic of interest\n2. Quality and significance of the research\n3. Source reputation and author credentials (if available)",
+  "selection_guidance_prompt": "Select articles that would be the most interesting to someone interested in the given topics.",
   "llm_models": {
     "summarization": "claude-sonnet-4-5-20250929",
     "selection": "claude-sonnet-4-5-20250929"
