@@ -1,5 +1,7 @@
 import asyncio
 from typing import List, Dict, Any
+
+import tenacity
 from anthropic import Anthropic
 
 
@@ -8,6 +10,11 @@ class ClaudeSummarizer:
         self.client = Anthropic(api_key=api_key)
         self.summarization_model = summarization_model
 
+    @tenacity.retry(
+        wait=tenacity.wait_fixed(2),
+        stop=tenacity.stop_after_attempt(3),
+        reraise=True,
+    )
     async def summarize_paper(self, item: Dict[str, Any], topics: List[str]) -> str:
         """Generate a summary for a single paper/item."""
         author_line = f"Author: {item['creator']}\n" if item.get('creator') else ""
@@ -41,6 +48,11 @@ Follow this with a concise summary as 3 bullet points. Keep each bullet point to
 
         return message.content[0].text
 
+    @tenacity.retry(
+        wait=tenacity.wait_fixed(2),
+        stop=tenacity.stop_after_attempt(3),
+        reraise=True,
+    )
     async def summarize_batch(self, items: List[Dict[str, Any]], topics: List[str], max_concurrent: int = 3) -> List[Dict[str, Any]]:
         """Summarize multiple items in batches."""
         results = []

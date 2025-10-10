@@ -42,6 +42,8 @@ async def main():
     MAX_ITEMS_TO_POST = config['max_items_to_post']
     MIN_RELEVANCE_SCORE = config['min_relevance_score']
     EMBEDDING_CACHE_DIR = config['embedding_cache_dir']
+    SHORTLIST_MULTIPLIER = config['shortlist_multiplier']
+    SELECTION_GUIDANCE_PROMPT = config['selection_guidance_prompt']
 
     # Article cache configuration
     CACHE_POSTED_ARTICLES = config['cache_posted_articles']
@@ -50,6 +52,7 @@ async def main():
     # Get LLM model configurations
     llm_models = config.get('llm_models', {})
     SUMMARIZATION_MODEL = llm_models['summarization']
+    SELECTION_MODEL = llm_models.get('selection', SUMMARIZATION_MODEL)
 
     print(f'⏰ Looking for posts from the last {TIMEFRAME_HOURS} hours')
     print(f'📊 Maximum items to post: {MAX_ITEMS_TO_POST}')
@@ -59,7 +62,7 @@ async def main():
 
     # Initialize components
     feed_parser = RSSFeedParser()
-    curator = ContentCurator(OPENAI_API_KEY, cache_dir=EMBEDDING_CACHE_DIR)
+    curator = ContentCurator(OPENAI_API_KEY, anthropic_api_key=ANTHROPIC_API_KEY, cache_dir=EMBEDDING_CACHE_DIR)
 
     # Initialize article cache if enabled
     article_cache = None
@@ -117,13 +120,29 @@ async def main():
                 print('✅ All recent items have been posted before')
                 sys.exit(0)
 
-        # Step 6: Curate based on topics using semantic similarity
-        print('🔎 Curating content based on semantic similarity to topics...')
-        curated_items = await curator.curate_items(recent_items, topics, min_score=MIN_RELEVANCE_SCORE, max_items_to_post=MAX_ITEMS_TO_POST)
-        print(f'Curated {len(curated_items)} relevant items')
+        # Step 6: Curate based on topics using semantic similarity (shortlist generation)
+        shortlist_size = MAX_ITEMS_TO_POST * SHORTLIST_MULTIPLIER
+        print(f'🔎 Creating shortlist of top {shortlist_size} items based on embedding similarity...')
+        shortlist_items = await curator.curate_items(recent_items, topics, min_score=MIN_RELEVANCE_SCORE, max_items_to_post=shortlist_size)
+        print(f'Shortlist contains {len(shortlist_items)} items')
+
+        if len(shortlist_items) == 0:
+            print('✅ No relevant items found')
+            sys.exit(0)
+
+        # Step 7: Use LLM to select final items from shortlist
+        print(f'🤖 Using LLM to select top {MAX_ITEMS_TO_POST} items from shortlist...')
+        curated_items = await curator.llm_select_items(
+            shortlist_items,
+            topics,
+            SELECTION_GUIDANCE_PROMPT,
+            MAX_ITEMS_TO_POST,
+            model=SELECTION_MODEL
+        )
+        print(f'Selected {len(curated_items)} items for posting')
 
         if len(curated_items) == 0:
-            print('✅ No relevant items found')
+            print('✅ No items selected by LLM')
             sys.exit(0)
 
         # Initialize AI and Slack clients only when needed
@@ -133,15 +152,15 @@ async def main():
         )
         slack_poster = SlackPoster(SLACK_TOKEN, SLACK_WEBHOOK)
 
-        # Step 7: Generate summaries
+        # Step 8: Generate summaries
         print('✍️  Generating AI summaries...')
         items_with_summaries = await summarizer.summarize_batch(curated_items, topics)
 
-        # Step 8: Post to Slack
+        # Step 9: Post to Slack
         print('📤 Posting to Slack...')
         await slack_poster.post_papers(SLACK_CHANNEL, items_with_summaries)
 
-        # Step 9: Cache posted article URLs (if cache enabled)
+        # Step 10: Cache posted article URLs (if cache enabled)
         if article_cache:
             posted_urls = [item.get('link') for item in items_with_summaries if item.get('link')]
             article_cache.mark_batch_as_posted(posted_urls)

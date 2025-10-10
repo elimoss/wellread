@@ -1,16 +1,19 @@
 import asyncio
 import hashlib
+import json
 from typing import List, Dict, Any
 
 import numpy as np
 from openai import OpenAI
+from anthropic import Anthropic
 from tqdm import tqdm
 from diskcache import Cache
 
 
 class ContentCurator:
-    def __init__(self, openai_api_key: str, cache_dir: str = "cache/embeddings"):
+    def __init__(self, openai_api_key: str, anthropic_api_key: str = None, cache_dir: str = "cache/embeddings"):
         self.client = OpenAI(api_key=openai_api_key)
+        self.anthropic_client = Anthropic(api_key=anthropic_api_key) if anthropic_api_key else None
         self.embedding_model = "text-embedding-3-large"
         self.cache = Cache(cache_dir)
         self.cache_hits = 0
@@ -172,3 +175,114 @@ class ContentCurator:
             'misses': self.cache_misses,
             'hit_rate': self.cache_hits / (self.cache_hits + self.cache_misses) if (self.cache_hits + self.cache_misses) > 0 else 0
         }
+
+    async def llm_select_items(
+        self,
+        shortlist: List[Dict[str, Any]],
+        topics: List[str],
+        guidance_prompt: str,
+        max_items: int,
+        model: str = "claude-sonnet-4-5-20250929"
+    ) -> List[Dict[str, Any]]:
+        """Use an LLM to select the best items from a shortlist based on topics and guidance."""
+        if not self.anthropic_client:
+            raise ValueError("Anthropic client not initialized. Please provide anthropic_api_key.")
+
+        if not shortlist:
+            return []
+
+        if len(shortlist) <= max_items:
+            return shortlist
+
+        # Prepare the shortlist for the LLM
+        items_summary = []
+        for idx, item in enumerate(shortlist):
+            items_summary.append({
+                'index': idx,
+                'title': item.get('title', 'No title'),
+                'source': item.get('feedSource', 'Unknown source'),
+                'relevance_score': item.get('relevanceScore', 0),
+                'creator': item.get('creator', 'Unknown'),
+                'description': (item.get('description') or item.get('content') or '')[:500]  # Truncate long descriptions
+            })
+
+        # Create the selection prompt
+        prompt = f"""You are a content curator selecting the most relevant articles from a shortlist.
+
+Topics of interest:
+{chr(10).join(f"- {topic}" for topic in topics)}
+
+Selection guidance:
+{guidance_prompt}
+
+Here are the {len(shortlist)} articles in the shortlist (with their embedding-based relevance scores):
+
+{json.dumps(items_summary, indent=2)}
+
+Please select the top {max_items} articles that best match the topics and guidance.
+
+Respond with ONLY a JSON array containing ALL articles with the following format:
+[
+  {{"index": 0, "selected": true, "explanation": "rationale for selection/rejection (one sentence)"}},
+  {{"index": 1, "selected": false, "explanation": "rationale for selection/rejection (one sentence)"}},
+  ...
+]"""
+
+        # Call the LLM
+        loop = asyncio.get_event_loop()
+        message = await loop.run_in_executor(
+            None,
+            lambda: self.anthropic_client.messages.create(
+                model=model,
+                max_tokens=5000,
+                messages=[{
+                    'role': 'user',
+                    'content': prompt
+                }]
+            )
+        )
+
+        # Parse the response
+        response_text = message.content[0].text.strip()
+
+        # Extract JSON from response (handle cases where LLM adds extra text)
+        # Try to find JSON array in the response
+        start_idx = response_text.find('[')
+        end_idx = response_text.rfind(']') + 1
+        if start_idx != -1 and end_idx > start_idx:
+            json_str = response_text[start_idx:end_idx]
+            selection_results = json.loads(json_str)
+        else:
+            selection_results = json.loads(response_text)
+
+        # Extract selected items and attach explanations
+        selected_items = []
+        for result in selection_results:
+            if not isinstance(result, dict):
+                continue
+
+            idx = result.get('index')
+            is_selected = result.get('selected', False)
+            explanation = result.get('explanation', '')
+
+            original_item = shortlist[idx]
+            print(f"{original_item.get('title')} selected: {is_selected}, explanation: {explanation}")
+
+            if is_selected and isinstance(idx, int) and 0 <= idx < len(shortlist):
+                item = shortlist[idx].copy()
+                item['selection_explanation'] = explanation
+                selected_items.append(item)
+
+            if len(selected_items) >= max_items:
+                break
+
+        # If we didn't get enough valid selections, fill with remaining top items
+        if len(selected_items) < max_items:
+            print(f"⚠️  LLM selected {len(selected_items)}/{max_items} items. Filling with top embedding scores.")
+            for item in shortlist:
+                if item not in selected_items:
+                    selected_items.append(item)
+                if len(selected_items) >= max_items:
+                    break
+
+        return selected_items
