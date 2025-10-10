@@ -10,6 +10,17 @@ An intelligent RSS feed monitoring Slackbot that curates and summarizes content 
 - 💬 **Clean Slack Layout**: Each paper posted as a top-level message with AI summary
 - 🤖 **GitHub Actions**: Runs automatically on schedule via GitHub Actions
 
+## How It Works
+
+1. **Fetch**: Retrieves items from all RSS feeds in `feeds.txt`
+2. **Deduplicate**: Removes duplicate articles within the current run (based on URL)
+3. **Filter by Time**: Keeps only items from the configured timeframe
+4. **Filter Previously Posted**: Removes articles that have been posted before (if caching enabled)
+5. **Curate**: Uses OpenAI embeddings to calculate semantic similarity between article titles and topics in `topics.txt`, then ranks by relevance and limits to top N items
+6. **Summarize**: Uses Claude to generate summaries for curated items
+7. **Post**: Posts header, then each paper as a top-level Slack message with summary
+8. **Cache**: Saves posted article URLs to prevent reposting
+
 ## Getting Started
 
 ### Fork This Repository
@@ -185,17 +196,6 @@ Or trigger manually in GitHub Actions:
 1. Go to Actions tab
 2. Select "Daily RSS Digest" workflow
 3. Click "Run workflow"
-
-## How It Works
-
-1. **Fetch**: Retrieves items from all RSS feeds in `feeds.txt`
-2. **Deduplicate**: Removes duplicate articles within the current run (based on URL)
-3. **Filter by Time**: Keeps only items from the configured timeframe
-4. **Filter Previously Posted**: Removes articles that have been posted before (if caching enabled)
-5. **Curate**: Uses OpenAI embeddings to calculate semantic similarity between article titles and topics in `topics.txt`, then ranks by relevance and limits to top N items
-6. **Summarize**: Uses Claude to generate summaries for curated items
-7. **Post**: Posts header, then each paper as a top-level Slack message with summary
-8. **Cache**: Saves posted article URLs to prevent reposting
 
 ## Project Structure
 
