@@ -30,7 +30,7 @@ Content:
 
 Topics of interest: {', '.join(topics)}
 
-The first line should identify the first author(s) and the last author as well as their institutional affiliation, if available. 
+The first line should identify the first author(s) and the last author. 
 Follow this with a concise summary as 3 bullet points. Keep each bullet point to one concise sentence. Be direct and professional."""
 
         # Run in thread pool to avoid blocking
